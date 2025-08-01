@@ -12,6 +12,7 @@ class AppGUI:
         self.classify_callback = classify_callback
         self.image_path = None
         self.image_label_img = None
+        self.cache = {}  # Inisialisasi cache untuk menyimpan hasil sementara
 
         # === Frame utama ===
         main_frame = tk.Frame(master, bg="#fff")
@@ -87,7 +88,7 @@ class AppGUI:
         mode_frame.pack(pady=(0, 18))
         self.mode_combo = ttk.Combobox(
             mode_frame, textvariable=self.mode_var, state="readonly",
-            values=["CNN", "OCR+BERT", "CNN+OCR+BERT"], width=20, font=("Segoe UI", 10)
+            values=["CNN", "OCR_BERT", "CNN & OCR_BERT"], width=20, font=("Segoe UI", 10)
         )
         self.mode_combo.pack(ipady=4)
         self.mode_combo.bind("<<ComboboxSelected>>", lambda e: self.update_visibility())
@@ -99,7 +100,7 @@ class AppGUI:
         self.cnn_model_var = tk.StringVar()
         self.cnn_model_combo = ttk.Combobox(
             self.cnn_group, textvariable=self.cnn_model_var, state="readonly",
-            values=["EfficientNet", "ResNet"], width=20, font=("Segoe UI", 10)
+            values=["EfficientNet-B0", "ResNet-50"], width=20, font=("Segoe UI", 10)
         )
         self.cnn_model_combo.pack(ipady=4)
         self.cnn_group.pack(pady=(0, 18))
@@ -128,9 +129,9 @@ class AppGUI:
         # Area hasil selalu dua kolom, kotak OCR hanya disembunyikan isinya jika mode CNN
         self.ocr_box_frame.grid()
         mode = self.mode_var.get()
-        if mode in ("CNN", "CNN+OCR+BERT"):
+        if mode in ("CNN", "CNN & OCR_BERT"):
             self.cnn_group.pack(pady=(0, 18))
-        if mode in ("OCR+BERT", "CNN+OCR+BERT"):
+        if mode in ("OCR_BERT", "CNN & OCR_BERT"):
             self.ocr_group_model.pack(pady=(0, 18))
             self.ocr_label.pack(anchor="center", pady=(0, 8))
             self.ocr_text_box.pack(padx=4, pady=(0, 8))
@@ -142,6 +143,11 @@ class AppGUI:
     def upload_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg")])
         if file_path:
+            # Jika path gambar berubah, reset cache
+            if self.image_path != file_path:
+                self.cache = {}
+                print("Gambar baru diunggah, cache dibersihkan.")
+            
             self.image_path = file_path
             img = Image.open(file_path).convert("RGB")
             img.thumbnail((300, 200))
@@ -164,12 +170,12 @@ class AppGUI:
         # Mapping value for backend
         mode_map = {
             "CNN": "cnn",
-            "OCR+BERT": "ocr_bert",
-            "CNN+OCR+BERT": "both"
+            "OCR_BERT": "ocr_bert",
+            "CNN & OCR_BERT": "both"
         }
         cnn_map = {
-            "ResNet": "resnet",
-            "EfficientNet": "efficientnet"
+            "ResNet-50": "resnet",
+            "EfficientNet-B0": "efficientnet"
         }
         ocr_map = {
             "PaddleOCR": "paddleocr",
@@ -181,7 +187,8 @@ class AppGUI:
             cnn_map.get(self.cnn_model_var.get(), "resnet"),
             ocr_map.get(self.ocr_engine_var.get(), "paddleocr"),
             show_result=self.show_result,
-            show_text=self.show_ocr_text
+            show_text=self.show_ocr_text,
+            cache=self.cache  # Kirim cache ke fungsi backend
         )
 
     def show_loading(self):

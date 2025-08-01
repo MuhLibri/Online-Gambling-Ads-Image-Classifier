@@ -1,164 +1,107 @@
 import tkinter as tk
-from gui import AppGUI
-import os
-import tempfile
-import numpy as np
-from PIL import Image
-from io import BytesIO
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-
-# OCR
-import easyocr
-from paddleocr import PaddleOCR
-
-# BERT
-from transformers import BertTokenizer, TFBertForSequenceClassification
-import tensorflow as tf
-import tempfile
-
+from module.gui import AppGUI
+from module.klasifikasi_citra import classify_image as classify_image_cnn
+from module.ekstraksi_teks import extract_text
+from module.klasifikasi_teks import classify_text as classify_text_bert
+from module.fusi import fuse_results
+import cv2
 
 # === LABEL MAP ===
 label_map = {
-    0: "Iklan judi online",
-    1: "Iklan non judi online"
+    0: "Iklan Judi Online",
+    1: "Iklan Non Judi Online"
 }
 
+# === FUNGSI UTAMA KLASIFIKASI ===
+def process_and_classify(image_path, mode, cnn_model, ocr_engine, show_result, show_text, cache):
+    """
+    Fungsi utama untuk memproses dan mengklasifikasikan gambar berdasarkan mode yang dipilih.
+    Fungsi ini mengintegrasikan semua modul: klasifikasi citra, ekstraksi teks, 
+    klasifikasi teks, dan fusi, serta menggunakan cache untuk optimasi.
+    """
+    try:
+        # Baca gambar sekali untuk digunakan di semua modul
+        image_data = cv2.imread(image_path)
+        if image_data is None:
+            raise FileNotFoundError(f"Tidak dapat membaca gambar dari: {image_path}")
 
-# === LOAD MODELS ===
-# CNN Models
-cnn_models = {
-    "efficientnet": load_model("models/CNN/efficientnet_model(20).keras"),
-    "resnet": load_model("models/CNN/resnet_model(15).keras")
-}
+        pred_cnn = None
+        pred_bert = None
+        extracted_text = ""
 
-# BERT Models
-bert_models = {
-    "easyocr": {
-        "model": TFBertForSequenceClassification.from_pretrained("models/BERT/bert_easyocr"),
-        "tokenizer": BertTokenizer.from_pretrained("models/BERT/bert_easyocr")
-    },
-    "paddleocr": {
-        "model": TFBertForSequenceClassification.from_pretrained("models/BERT/bert_paddleocr"),
-        "tokenizer": BertTokenizer.from_pretrained("models/BERT/bert_paddleocr")
-    }
-}
+        # 1. Klasifikasi Citra (CNN)
+        if mode in ("cnn", "both"):
+            cache_key_cnn = f"cnn_{cnn_model}"
+            if cache_key_cnn in cache:
+                pred_cnn = cache[cache_key_cnn]
+                print(f"CNN Predict (from cache): Logit={pred_cnn} => Label='{label_map.get(pred_cnn, 'Tidak Diketahui')}'")
+            else:
+                pred_cnn = classify_image_cnn(image_data, model_choice=cnn_model)
+                cache[cache_key_cnn] = pred_cnn
+                print(f"CNN Predict: Logit={pred_cnn} => Label='{label_map.get(pred_cnn, 'Tidak Diketahui')}'")
 
-# OCR Engines
-ocr_engines = {
-    "easyocr": easyocr.Reader(['id']),
-    "paddleocr": PaddleOCR(use_angle_cls=True, lang='id')
-}
+        # 2. Ekstraksi Teks (OCR) dan Klasifikasi Teks (BERT)
+        if mode in ("ocr_bert", "both"):
+            bert_model_choice = 'easyocr_bert' if ocr_engine == 'easyocr' else 'paddleocr_bert'
+            
+            # Cek cache untuk hasil OCR
+            cache_key_ocr = f"ocr_{ocr_engine}"
+            if cache_key_ocr in cache:
+                extracted_text = cache[cache_key_ocr]
+                print(f"OCR Text (from cache, using {ocr_engine}): {extracted_text}")
+            else:
+                extracted_text = extract_text(image_data, ocr_engine=ocr_engine)
+                cache[cache_key_ocr] = extracted_text
+                print(f"OCR Text (using {ocr_engine}): {extracted_text}")
 
-
-# === IMAGE PROCESSING ===
-def preprocess_image_for_cnn(img_path, cnn_model_name):
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-
-    if cnn_model_name == "efficientnet":
-        img_array = tf.keras.applications.efficientnet.preprocess_input(img_array)
-    elif cnn_model_name == "resnet":
-        img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
-    return img_array
-
-
-def convert_image_to_jpg_in_memory(img_path):
-    img = Image.open(img_path).convert('RGB')
-    buffer = BytesIO()
-    img.save(buffer, format="JPEG")
-    return buffer.getvalue()
-
-
-# === OCR EXTRACT ===
-def extract_text(image_path, engine="easyocr"):
-    img_bytes = convert_image_to_jpg_in_memory(image_path)
-
-    if engine == "easyocr":
-        result = ocr_engines["easyocr"].readtext(img_bytes, detail=0)
-        return " ".join(result)
-
-    elif engine == "paddleocr":
-        try:
-            # Try direct path first (most stable for PaddleOCR)
-            result = ocr_engines["paddleocr"].ocr(image_path, cls=True)
-            lines = [line[1][0] for line in result[0]]
-            return " ".join(lines)
-        except Exception:
-            # If error, fallback to temp file (sometimes helps on Windows)
-            img = Image.open(image_path).convert("RGB")
-            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-                tmp_path = tmp.name
-                img.save(tmp_path)
-            try:
-                # Re-instantiate PaddleOCR to avoid internal state/caching issues
-                paddleocr_instance = PaddleOCR(use_angle_cls=True, lang='id')
-                result = paddleocr_instance.ocr(tmp_path, cls=True)
-                lines = [line[1][0] for line in result[0]]
-                return " ".join(lines)
-            finally:
-                os.remove(tmp_path)
-
-    return ""
+            # Cek cache untuk hasil klasifikasi teks
+            cache_key_bert = f"bert_{bert_model_choice}"
+            if extracted_text.strip() and extracted_text != "tidak ada teks":
+                if cache_key_bert in cache:
+                    pred_bert = cache[cache_key_bert]
+                    print(f"BERT Predict (from cache): Logit={pred_bert} => Label='{label_map.get(pred_bert, 'Tidak Diketahui')}'")
+                else:
+                    pred_bert = classify_text_bert(extracted_text, model_choice=bert_model_choice)
+                    cache[cache_key_bert] = pred_bert
+                    print(f"BERT Predict: Logit={pred_bert} => Label='{label_map.get(pred_bert, 'Tidak Diketahui')}'")
+            else:
+                pred_bert = 1 # Jika tidak ada teks, asumsikan bukan judi
+                extracted_text = "tidak ada teks" # Pastikan teks konsisten
+                print(f"BERT Predict: No text found, defaulting to Logit=1")
 
 
-# === BERT CLASSIFY ===
-def classify_text(text, engine="easyocr"):
-    tokenizer = bert_models[engine]["tokenizer"]
-    model = bert_models[engine]["model"]
-    inputs = tokenizer(text, return_tensors="tf", padding=True, truncation=True, max_length=512)
-    outputs = model(inputs)
-    probs = tf.nn.softmax(outputs.logits, axis=-1).numpy()[0]
-    pred = int(np.argmax(probs))  # 0: Judi, 1: Non-Judi
-    return pred, probs
+        # 3. Fusi Hasil
+        final_pred = 1 # Default ke "Bukan Judi"
+        if mode == "both":
+            # Fusi hanya dilakukan jika kedua prediktor ada
+            if pred_cnn is not None and pred_bert is not None:
+                final_pred = fuse_results(text_logit=pred_bert, image_logit=pred_cnn)
+        elif mode == "cnn":
+            final_pred = pred_cnn if pred_cnn is not None else 1
+        elif mode == "ocr_bert":
+            final_pred = pred_bert if pred_bert is not None else 1
 
+        # 4. Tampilkan Hasil
+        is_judi = (final_pred == 0)
+        result_text = f"🟥 {label_map[0]}" if is_judi else f"🟩 {label_map[1]}"
+        print(f"Final Prediction: {result_text}")
 
-# === MAIN ENTRY ===
-def classify_image(img_path, mode, cnn_model, ocr_engine, show_result, show_text):
-    pred_cnn = None
-    pred_bert = None
+        if show_result:
+            show_result(result_text, is_judi)
 
-    if mode in ("cnn", "both"):
-        img = preprocess_image_for_cnn(img_path, cnn_model)
-        model = cnn_models[cnn_model]
-        raw_pred = model.predict(img)[0][0]
-        pred_cnn = int(raw_pred > 0.5)
-        print(f"CNN Predict: {raw_pred:.4f} => {label_map[pred_cnn]}")
+        if show_text and mode in ("ocr_bert", "both"):
+            show_text(extracted_text)
 
-    if mode in ("ocr_bert", "both"):
-        text = extract_text(img_path, engine=ocr_engine)
-        print("OCR Text:", text)
-        if text.strip():
-            pred_bert, _ = classify_text(text, engine=ocr_engine)
-        else:
-            pred_bert = 0
-        print("BERT Predict:", label_map[pred_bert])
+    except Exception as e:
+        # Menampilkan error di GUI jika terjadi masalah
+        error_message = f"Terjadi Error: {e}"
+        print(error_message)
+        if show_result:
+            show_result(error_message, True) # Tampilkan dengan latar merah
 
-    # Combine result
-    if mode == "both":
-        final_pred = int(pred_cnn == 1 and pred_bert == 1)
-    elif mode == "cnn":
-        final_pred = pred_cnn
-    elif mode == "ocr_bert":
-        final_pred = pred_bert
-    else:
-        final_pred = 0
-
-    is_judi = final_pred == 0
-    result_text = "🟥 Iklan Judi Online" if is_judi else "🟩 Iklan Non Judi Online"
-    print("Final Prediction:", result_text)
-
-    if show_result:
-        show_result(result_text, is_judi)
-
-    if show_text and mode in ("ocr_bert", "both"):
-        show_text(text)
-
-
+# === MAIN ENTRY POINT ===
 if __name__ == "__main__":
-    import tkinter as tk
-    from gui import AppGUI
     root = tk.Tk()
-    app = AppGUI(root, classify_image)
+    # Berikan fungsi process_and_classify ke AppGUI
+    app = AppGUI(root, process_and_classify)
     root.mainloop()
