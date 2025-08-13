@@ -11,8 +11,8 @@ import os
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Definisikan path ke model-model yang telah dilatih
-EASYOCR_BERT_PATH = os.path.join(PROJECT_ROOT, "models", "OCR_BERT", "EasyOCR_BERT(5e-5)")
-PADDLEOCR_BERT_PATH = os.path.join(PROJECT_ROOT, "models", "OCR_BERT", "PaddleOCR_BERT(5e-5)")
+EASYOCR_BERT_PATH = os.path.join(PROJECT_ROOT, "model", "OCR_BERT", "EasyOCR_BERT(5e-5)")
+PADDLEOCR_BERT_PATH = os.path.join(PROJECT_ROOT, "model", "OCR_BERT", "PaddleOCR_BERT(5e-5)")
 
 # Muat tokenizer dan model hanya sekali saat modul diimpor
 try:

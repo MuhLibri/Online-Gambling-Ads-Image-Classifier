@@ -141,15 +141,34 @@ class AppGUI:
             # Tetap tampilkan frame kosong agar layout tidak berubah
 
     def upload_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg")])
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.webp")])
         if file_path:
             # Jika path gambar berubah, reset cache
             if self.image_path != file_path:
                 self.cache = {}
                 print("Gambar baru diunggah, cache dibersihkan.")
-            
+
             self.image_path = file_path
+            
+            # Buka gambar dan konversi ke RGB
             img = Image.open(file_path).convert("RGB")
+
+            # Jika file adalah webp, konversi dan simpan sebagai jpg sementara
+            if file_path.lower().endswith(".webp"):
+                import tempfile
+                import os
+                
+                # Buat file sementara untuk menyimpan versi jpg
+                fd, temp_jpg_path = tempfile.mkstemp(suffix=".jpg")
+                os.close(fd) # Tutup file descriptor karena Pillow akan menanganinya
+                
+                img.save(temp_jpg_path, 'jpeg')
+                print(f"Gambar WebP dikonversi ke JPG sementara di: {temp_jpg_path}")
+                
+                # Gunakan path jpg sementara untuk diproses
+                self.image_path = temp_jpg_path
+
+            # Tampilkan thumbnail di GUI
             img.thumbnail((300, 200))
             self.image_label_img = ImageTk.PhotoImage(img)
             self.image_label.config(image=self.image_label_img)

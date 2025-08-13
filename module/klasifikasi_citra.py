@@ -14,28 +14,41 @@ import cv2
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Definisikan path ke model-model yang telah dilatih
-EFFICIENTNET_PATH = os.path.join(PROJECT_ROOT, "models", "CNN", "EfficientNet_B0(1e-3).pt")
-RESNET_PATH = os.path.join(PROJECT_ROOT, "models", "CNN", "ResNet50(1e-4).pt")
+EFFICIENTNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "EfficientNet_B0(1e-4).pt")
+RESNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "ResNet50(1e-4).pt")
 
 # Tentukan device (CPU atau GPU)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def _load_model(model_type, path, num_classes=1): # Diubah ke 1
-    """Memuat model dan memodifikasi layer terakhir."""
+def _load_model(model_type, path, num_classes=1):
+    """Memuat model dan memodifikasi layer terakhir agar sesuai dengan training."""
     model = None
     if model_type == 'efficientnet':
-        model = models.efficientnet_b0()
-        num_ftrs = model.classifier[1].in_features
-        model.classifier[1] = nn.Linear(num_ftrs, num_classes)
+        # Inisialisasi model tanpa bobot pre-trained
+        model = models.efficientnet_b0(weights=None)
+        in_features = model.classifier[1].in_features
+        # Arsitektur classifier harus sama persis dengan saat training
+        model.classifier = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(in_features, num_classes)
+        )
     elif model_type == 'resnet':
-        model = models.resnet50()
-        num_ftrs = model.fc.in_features
-        model.fc = nn.Linear(num_ftrs, num_classes)
+        # Inisialisasi model tanpa bobot pre-trained
+        model = models.resnet50(weights=None)
+        in_features = model.fc.in_features
+        # Arsitektur classifier harus sama persis dengan saat training
+        model.fc = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(in_features, num_classes)
+        )
     else:
         raise ValueError("model_type harus 'efficientnet' atau 'resnet'")
 
     # Muat state dict dengan weights_only=True untuk keamanan
-    model.load_state_dict(torch.load(path, map_location=DEVICE, weights_only=True))
+    # Pastikan file model .pt ada di path yang benar
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"File model tidak ditemukan di: {path}")
+    model.load_state_dict(torch.load(path, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
