@@ -14,8 +14,8 @@ import cv2
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Definisikan path ke model-model yang telah dilatih
-EFFICIENTNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "EfficientNet_B0(1e-4).pt")
-RESNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "ResNet50(1e-4).pt")
+EFFICIENTNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "EfficientNet-B0_final_model.pt")
+RESNET_PATH = os.path.join(PROJECT_ROOT, "model", "CNN", "ResNet-50_final_model.pt")
 
 # Tentukan device (CPU atau GPU)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
