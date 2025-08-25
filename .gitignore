@@ -1,4 +1,4 @@
 /__pycache__
-/model
+/models/OCR_BERT/EasyOCR_BERT
+/models/OCR_BERT/PaddleOCR_BERT
 *.pyc
-/Visual
