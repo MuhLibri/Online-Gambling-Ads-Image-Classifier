@@ -7,7 +7,7 @@ import threading
 class AppGUI:
     def __init__(self, master, classify_callback):
         self.master = master
-        self.master.title("Online Gambling Ad Classification")
+        self.master.title("Online Gambling Ads Image Classifier")
         self.master.geometry("960x540")
         self.master.resizable(False, False)
         self.classify_callback = classify_callback
