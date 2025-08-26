@@ -2,32 +2,20 @@
 
 This project is a desktop application designed to classify images to determine if they are advertisements for online gambling. It utilizes a graphical user interface (GUI) and employs various deep learning models, including CNNs for image classification, OCR for text extraction, and BERT for text classification. The application also features a fusion mechanism to combine the results from different models for a more accurate and robust prediction.
 
-## Screenshot
-
-Here is a preview of the application's interface and examples of classification results.
-
-### Main Interface
-![Main GUI](screenshots/main.png)
-
-### Classification Examples
-![Result 1](screenshots/1.png)
-![Result 2](screenshots/2.png)
-![Result 3](screenshots/3.png)
-
 ## Features
 
 - **User-Friendly GUI**: An intuitive interface built with Tkinter for easy image uploading and classification.
 - **Multiple Classification Methods**:
     - **CNN**: Classifies the image based purely on visual features.
-    - **OCR + BERT**: Extracts text from the image and classifies the content.
-    - **CNN & OCR + BERT (Fusion)**: Combines the predictions from both methods for a comprehensive analysis.
+    - **OCR BERT**: Extracts text from the image and classifies the image based on the extracted text.
+    - **CNN & OCR BERT (Fusion)**: Combines the predictions from both methods for a comprehensive analysis.
 - **Flexible Model Selection**:
     - **CNN Models**: Choose between `EfficientNet-B0` and `ResNet-50`.
     - **OCR Engines**: Select either `PaddleOCR` or `EasyOCR` for text extraction.
 
 ## Project Structure
 ```
-TA-Klasifikasi-Citra-Iklan-Judi-Online/
+Online-Gambling-Ads-Image-Classifier/
 ├── models/
 │   ├── CNN/
 │   │   ├── EfficientNet-B0_final_model.pt
@@ -60,7 +48,7 @@ These models analyze the visual patterns of an image to make a prediction. The t
 - **EfficientNet-B0**: A state-of-the-art model known for its high accuracy and efficiency.
 - **ResNet-50**: A classic and powerful deep residual network.
 
-### 2. Text Classification (OCR + BERT)
+### 2. Text Classification (OCR BERT)
 This two-step method first extracts any text present in the image and then classifies it.
 - **OCR (Optical Character Recognition)**:
     - **PaddleOCR**: A powerful multilingual OCR toolkit.
@@ -73,18 +61,17 @@ When the "CNN & OCR BERT" mode is selected, the application uses a fusion algori
 
 ## Model Performance
 The following table shows the performance of the models on the test set.
-*(TODO: Fill this table with your model evaluation results)*
 
-| Model                                        | Accuracy | Precision | Recall | F1-Score |
-| -------------------------------------------- |:--------:|:---------:|:------:|:--------:|
-| **EfficientNet-B0**                          |  94.00%  |   92.80%  | 95.40% |  94.10%  |
-| **ResNet-50**                                |  94.10%  |   93.49%  | 94.80% |  94.14%  |
-| **PaddleOCR BERT**                           |  97.60%  |   97.60%  | 97.60% |  97.60%  |
-| **EasyOCR BERT**                             |  96.81%  |   96.80%  | 96.80% |  96.80%  |
-| **Fusion (EfficientNet & PaddleOCR BERT)**   |  96.40%  |   99.79%  | 93.00% |  96.27%  |
-| **Fusion (EfficientNet & EasyOCR BERT)**     |  96.10%  |   99.36%  | 92.80% |  95.97%  |
-| **Fusion (ResNet-50 & PaddleOCR BERT)**      |  96.00%  |   99.57%  | 92.40% |  95.85%  |
-| **Fusion (ResNet-50 & EasyOCR BERT)**        |  96.00%  |   99.57%  | 92.40% |  95.85%  |
+| Model                                         | Accuracy | Precision | Recall | F1-Score |
+| --------------------------------------------- |:--------:|:---------:|:------:|:--------:|
+| **EfficientNet-B0**                           |  94.00%  |   92.80%  | 95.40% |  94.10%  |
+| **ResNet-50**                                 |  94.10%  |   93.49%  | 94.80% |  94.14%  |
+| **PaddleOCR BERT**                            |  97.60%  |   97.60%  | 97.60% |  97.60%  |
+| **EasyOCR BERT**                              |  96.81%  |   96.80%  | 96.80% |  96.80%  |
+| **Fusion (EfficientNet-B0 & PaddleOCR BERT)** |  96.40%  |   99.79%  | 93.00% |  96.27%  |
+| **Fusion (EfficientNet-B0 & EasyOCR BERT)**   |  96.10%  |   99.36%  | 92.80% |  95.97%  |
+| **Fusion (ResNet-50 & PaddleOCR BERT)**       |  96.00%  |   99.57%  | 92.40% |  95.85%  |
+| **Fusion (ResNet-50 & EasyOCR BERT)**         |  96.00%  |   99.57%  | 92.40% |  95.85%  |
 
 
 ## How to Run the Application
@@ -99,8 +86,8 @@ Follow these steps to set up and run the project on your local machine.
 ### Step 1: Clone the Repository
 Clone this repository to your local machine using the following command:
 ```bash
-git clone https://github.com/MuhLibri/TA-Klasifikasi-Citra-Iklan-Judi-Online.git
-cd TA-Klasifikasi-Citra-Iklan-Judi-Online
+git clone https://github.com/MuhLibri/Online-Gambling-Ads-Image-Classifier.git
+cd Online-Gambling-Ads-Image-Classifier
 ```
 
 ### Step 2: Install Dependencies
@@ -147,9 +134,13 @@ The models were trained and evaluated using a custom dataset of images containin
 Here are the dataset used to train and evaluate the models:
 https://drive.google.com/drive/folders/1mCl9XgL7FtgqaJhkAGNC5xpeEpnsDDDY?usp=sharing
 
-5-Fold Cross-Validation were used for hyperparameter tuning to choose the best hyperparameters. Then the best hyperparameters were used to train the final models with the following data splits:
-- **Training Set**: 4000 images (2000 online gambling ads, 2000 non-gambling ads)
-- **Test Set**: 1000 images (500 online gambling ads, 500 non-gambling ads)
+## Screenshot
+Here is a preview of the application's interface and examples of classification results.
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+### Main Interface
+![Main GUI](screenshots/main.png)
+
+### Classification Examples
+![Result 1](screenshots/1.png)
+![Result 2](screenshots/2.png)
+![Result 3](screenshots/3.png)
